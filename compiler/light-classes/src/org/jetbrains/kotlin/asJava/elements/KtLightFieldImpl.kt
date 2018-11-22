@@ -22,12 +22,8 @@ import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.asJava.builder.LightMemberOrigin
 import org.jetbrains.kotlin.asJava.builder.LightMemberOriginForDeclaration
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
-import org.jetbrains.kotlin.asJava.classes.KtLightClassForEnumEntry
 import org.jetbrains.kotlin.asJava.classes.cannotModify
-import org.jetbrains.kotlin.asJava.classes.lazyPub
-import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
-import java.lang.UnsupportedOperationException
 
 sealed class KtLightFieldImpl<D : PsiField>(
         override val lightMemberOrigin: LightMemberOrigin?,
@@ -80,21 +76,13 @@ sealed class KtLightFieldImpl<D : PsiField>(
             containingClass: KtLightClass,
             dummyDelegate: PsiField?
     ) : KtLightFieldImpl<PsiEnumConstant>(origin, computeDelegate, containingClass, dummyDelegate), PsiEnumConstant {
-        private val initializingClass by lazyPub {
-            val kotlinEnumEntry = (lightMemberOrigin as? LightMemberOriginForDeclaration)?.originalElement as? KtEnumEntry
-            if (kotlinEnumEntry != null && kotlinEnumEntry.declarations.isNotEmpty()) {
-                KtLightClassForEnumEntry(kotlinEnumEntry, clsDelegate)
-            }
-            else null
-        }
-
         // NOTE: we don't use "delegation by" because the compiler would generate method calls to ALL of PsiEnumConstant members,
         // but we need only members whose implementations are not present in KotlinLightField
         override fun getArgumentList() = clsDelegate.argumentList
 
-        override fun getInitializingClass(): PsiEnumConstantInitializer? = initializingClass
+        override fun getInitializingClass(): PsiEnumConstantInitializer? = null
         override fun getOrCreateInitializingClass(): PsiEnumConstantInitializer {
-            return initializingClass ?: throw UnsupportedOperationException("Can't create enum constant body: ${clsDelegate.name}")
+            return throw UnsupportedOperationException("Can't create enum constant body: ${clsDelegate.name}")
         }
 
         override fun resolveConstructor() = clsDelegate.resolveConstructor()
