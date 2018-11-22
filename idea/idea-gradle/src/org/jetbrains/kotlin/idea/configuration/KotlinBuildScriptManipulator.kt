@@ -179,7 +179,7 @@ class KotlinBuildScriptManipulator(
     }
 
     private fun KtBlockExpression.addNoVersionCompileStdlibIfMissing(stdlibArtifactName: String): KtCallExpression? =
-        findStdLibDependency() ?: addExpressionIfMissing("compile(${getKotlinModuleDependencySnippet(stdlibArtifactName, null)})") as? KtCallExpression
+        findStdLibDependency() ?: addExpressionIfMissing("implementation(${getKotlinModuleDependencySnippet(stdlibArtifactName, null)})") as? KtCallExpression
 
     private fun KtFile.containsCompileStdLib(): Boolean =
         findScriptInitializer("dependencies")?.getBlock()?.findStdLibDependency() != null
@@ -470,7 +470,7 @@ class KotlinBuildScriptManipulator(
         groupId: String,
         artifactId: String,
         version: String?,
-        compileScope: String = "compile"
+        compileScope: String = "implementation"
     ): String {
         if (groupId != KOTLIN_GROUP_ID) {
             return "$compileScope(\"$groupId:$artifactId:$version\")"

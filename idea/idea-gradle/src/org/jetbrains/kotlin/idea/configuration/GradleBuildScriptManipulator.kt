@@ -25,6 +25,7 @@ import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.idea.util.module
 import org.jetbrains.plugins.gradle.settings.GradleSettings
+import java.lang.IllegalArgumentException
 
 interface GradleBuildScriptManipulator<out Psi : PsiFile> {
     val scriptFile: Psi
@@ -77,4 +78,20 @@ fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String): Bool
     if (gradleVersion < MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX) return false
 
     return !isConfiguredWithOldSyntax(kotlinPluginName)
+}
+
+private val MIN_GRADLE_VERSION_FOR_API_AND_IMPLEMENTATION = GradleVersion.version("3.4")
+
+fun GradleVersion.scope(directive: String): String {
+    if (this < MIN_GRADLE_VERSION_FOR_API_AND_IMPLEMENTATION) {
+        return when (directive) {
+            "implementation" -> "compile"
+            "testImplementation" -> "testCompile"
+            "debugCompile" -> "debugImplementation"
+            "androidTestImplementation" -> "androidTestCompile"
+            else -> throw IllegalArgumentException("Unknown directive `$directive`")
+        }
+    }
+
+    return directive
 }
