@@ -70,6 +70,9 @@ fun fetchGradleVersion(psiFile: PsiFile): GradleVersion {
     return GradleVersion.current()
 }
 
+// Kept for compatibility reasons (pre-181.3 IDEAs)
+val BuildScriptDataBuilder.gradleVersion get() = GradleVersion.version("0.0")
+
 val MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX = GradleVersion.version("4.4")
 
 fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String, gradleVersion: GradleVersion): Boolean {
