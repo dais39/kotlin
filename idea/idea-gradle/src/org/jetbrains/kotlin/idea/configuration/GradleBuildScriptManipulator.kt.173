@@ -65,11 +65,20 @@ interface GradleBuildScriptManipulator<out Psi : PsiFile> {
     fun addResolutionStrategy(pluginId: String)
 }
 
+// Kept for compatibility reasons (pre-181.3 IDEAs)
+fun fetchGradleVersion(psiFile: PsiFile): GradleVersion {
+    return GradleVersion.current()
+}
+
 val MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX = GradleVersion.version("4.4")
 
-// Kept for compatibility reasons (pre-181.3 IDEAs)
-fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String) = false
-val BuildScriptDataBuilder.gradleVersion get() = GradleVersion.version("0.0")
+fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String, gradleVersion: GradleVersion): Boolean {
+    if (!preferNewSyntax) return false
+
+    if (gradleVersion < MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX) return false
+
+    return !isConfiguredWithOldSyntax(kotlinPluginName)
+}
 
 private val MIN_GRADLE_VERSION_FOR_API_AND_IMPLEMENTATION = GradleVersion.version("3.4")
 

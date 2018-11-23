@@ -37,6 +37,8 @@ class KotlinBuildScriptManipulator(
     override val scriptFile: KtFile,
     override val preferNewSyntax: Boolean
 ) : GradleBuildScriptManipulator<KtFile> {
+    private val gradleVersion = fetchGradleVersion(scriptFile)
+
     override fun isConfiguredWithOldSyntax(kotlinPluginName: String) = runReadAction {
         scriptFile.containsApplyKotlinPlugin(kotlinPluginName) && scriptFile.containsCompileStdLib()
     }
@@ -46,7 +48,7 @@ class KotlinBuildScriptManipulator(
     }
 
     override fun configureProjectBuildScript(kotlinPluginName: String, version: String): Boolean {
-        if (useNewSyntax(kotlinPluginName)) return false
+        if (useNewSyntax(kotlinPluginName, gradleVersion)) return false
 
         val originalText = scriptFile.text
         scriptFile.getBuildScriptBlock()?.apply {
@@ -73,7 +75,7 @@ class KotlinBuildScriptManipulator(
         jvmTarget: String?
     ): Boolean {
         val originalText = scriptFile.text
-        val useNewSyntax = useNewSyntax(kotlinPluginName)
+        val useNewSyntax = useNewSyntax(kotlinPluginName, gradleVersion)
         scriptFile.apply {
             if (useNewSyntax) {
                 createPluginInPluginsGroupIfMissing(kotlinPluginExpression, version)
@@ -476,7 +478,14 @@ class KotlinBuildScriptManipulator(
             return "$compileScope(\"$groupId:$artifactId:$version\")"
         }
 
-        if (useNewSyntax(if (scriptFile.module?.getBuildSystemType() == AndroidGradle) "kotlin-android" else KotlinGradleModuleConfigurator.KOTLIN)) {
+        val kotlinPluginName =
+            if (scriptFile.module?.getBuildSystemType() == AndroidGradle) {
+                "kotlin-android"
+            } else {
+                KotlinGradleModuleConfigurator.KOTLIN
+            }
+
+        if (useNewSyntax(kotlinPluginName, gradleVersion)) {
             return "$compileScope(${getKotlinModuleDependencySnippet(artifactId)})"
         }
 
