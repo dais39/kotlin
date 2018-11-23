@@ -23,6 +23,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import org.gradle.util.GradleVersion
 import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.idea.util.module
 import org.jetbrains.plugins.gradle.settings.GradleSettings
 
@@ -83,7 +84,12 @@ fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String, gradl
 
     if (gradleVersion < MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX) return false
 
-    return !isConfiguredWithOldSyntax(kotlinPluginName)
+    if (isConfiguredWithOldSyntax(kotlinPluginName)) return true
+
+    val fileText = runReadAction { scriptFile.text }
+    val hasOldApply = fileText.contains("apply plugin:")
+
+    return !hasOldApply
 }
 
 private val MIN_GRADLE_VERSION_FOR_API_AND_IMPLEMENTATION = GradleVersion.version("3.4")

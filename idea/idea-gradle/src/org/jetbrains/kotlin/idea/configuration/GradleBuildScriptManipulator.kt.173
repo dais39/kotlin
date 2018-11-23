@@ -80,7 +80,12 @@ fun GradleBuildScriptManipulator<*>.useNewSyntax(kotlinPluginName: String, gradl
 
     if (gradleVersion < MIN_GRADLE_VERSION_FOR_NEW_PLUGIN_SYNTAX) return false
 
-    return !isConfiguredWithOldSyntax(kotlinPluginName)
+    if (isConfiguredWithOldSyntax(kotlinPluginName)) return true
+
+    val fileText = runReadAction { scriptFile.text }
+    val hasOldApply = fileText.contains("apply plugin:")
+
+    return !hasOldApply
 }
 
 private val MIN_GRADLE_VERSION_FOR_API_AND_IMPLEMENTATION = GradleVersion.version("3.4")
