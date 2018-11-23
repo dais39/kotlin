@@ -9,41 +9,46 @@ import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import org.jetbrains.kotlin.idea.inspections.collections.AbstractCallChainChecker
 import org.jetbrains.kotlin.idea.inspections.collections.SimplifyCallChainFix
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.psi.qualifiedExpressionVisitor
 import org.jetbrains.kotlin.resolve.calls.model.DefaultValueArgument
 
 class RedundantAsyncInspection : AbstractCallChainChecker() {
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean) =
-        qualifiedExpressionVisitor(fun(expression) {
-            var defaultContext: Boolean? = null
-            var defaultStart: Boolean? = null
-            var defaultParent: Boolean? = null
-            val conversion = findQualifiedConversion(expression, conversionGroups) check@{ _, firstResolvedCall, _, _ ->
-                for ((parameterDescriptor, valueArgument) in firstResolvedCall.valueArguments) {
-                    val default = valueArgument is DefaultValueArgument
-                    when (parameterDescriptor.name.asString()) {
-                        "context" -> defaultContext = default
-                        "start" -> defaultStart = default
-                        "parent" -> defaultParent = default
-                    }
-                }
-                true
-            } ?: return
-            defaultContext ?: return
-            defaultStart ?: return
-            if (defaultParent != true) return
-            if (defaultContext!! && !defaultStart!!) return
-
-            var replacement = conversion.replacement
-            if (defaultContext!! && defaultStart!!) {
-                if (conversion === conversions[0]) {
-                    replacement += "($defaultAsyncArgument)"
-                } else {
-                    replacement += "($defaultAsyncArgumentExperimental)"
+    fun generateReplacement(expression: KtQualifiedExpression): String? {
+        var defaultContext: Boolean? = null
+        var defaultStart: Boolean? = null
+        var defaultParent: Boolean? = null
+        val conversion = findQualifiedConversion(expression, conversionGroups) check@{ _, firstResolvedCall, _, _ ->
+            for ((parameterDescriptor, valueArgument) in firstResolvedCall.valueArguments) {
+                val default = valueArgument is DefaultValueArgument
+                when (parameterDescriptor.name.asString()) {
+                    "context" -> defaultContext = default
+                    "start" -> defaultStart = default
+                    "parent" -> defaultParent = default
                 }
             }
+            true
+        } ?: return null
+        if (defaultContext == null) return null
+        if (defaultStart == null) return null
+        if (defaultParent != true) return null
+        if (defaultContext!! && !defaultStart!!) return null
 
+        var replacement = conversion.replacement
+        if (defaultContext!! && defaultStart!!) {
+            replacement += if (conversion === conversions[0]) {
+                "($defaultAsyncArgument)"
+            } else {
+                "($defaultAsyncArgumentExperimental)"
+            }
+        }
+        return replacement
+    }
+
+    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean) =
+        qualifiedExpressionVisitor(fun(expression) {
+            val replacement = generateReplacement(expression) ?: return
             val descriptor = holder.manager.createProblemDescriptor(
                 expression,
                 expression.firstCalleeExpression()!!.textRange.shiftRight(-expression.startOffset),
