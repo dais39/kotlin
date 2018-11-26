@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.cli.AbstractCliTest
 import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import java.io.File
+import java.util.concurrent.TimeUnit
 import java.util.jar.Manifest
 
 class Java9ModulesIntegrationTest : AbstractKotlinCompilerIntegrationTest() {
@@ -255,9 +256,8 @@ class Java9ModulesIntegrationTest : AbstractKotlinCompilerIntegrationTest() {
         )
 
         val process = ProcessBuilder().command(command).start()
-        process.waitFor()
+        process.waitFor(1, TimeUnit.MINUTES)
         val got = process.inputStream.reader().readText()
-        val expected = File("$testDataDirectory/stdout.txt").inputStream().reader().readText()
-        TestCase.assertEquals(expected, got)
+        KotlinTestUtils.assertEqualsToFile(File("$testDataDirectory/stdout.txt"), got)
     }
 }
