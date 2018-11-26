@@ -50,36 +50,34 @@ internal fun BaseContinuationImpl.getStackTraceElementImpl(): StackTraceElement?
 }
 
 private object ModuleNameRetriever {
-    private open class Cache(val getModuleMethod: Method?, val getDescriptorMethod: Method?, val nameMethod: Method?)
-    private object NotOnJava9 : Cache(null, null, null)
+    private class Cache(val getModuleMethod: Method?, val getDescriptorMethod: Method?, val nameMethod: Method?)
+
+    private val notOnJava9 = Cache(null, null, null)
 
     var cache: Cache? = null
 
     fun getModuleName(continuation: BaseContinuationImpl): String? {
-        if (cache == null) {
-            buildCache(continuation)
-        }
-        if (cache === NotOnJava9) {
+        val cache = this.cache ?: buildCache(continuation)
+        if (cache === notOnJava9) {
             return null
         }
-        val module = cache?.getModuleMethod?.invoke(continuation.javaClass) ?: return null
-        val descriptor = cache?.getDescriptorMethod?.invoke(module) ?: return null
-        return cache?.nameMethod?.invoke(descriptor) as? String
+        val module = cache.getModuleMethod?.invoke(continuation.javaClass) ?: return null
+        val descriptor = cache.getDescriptorMethod?.invoke(module) ?: return null
+        return cache.nameMethod?.invoke(descriptor) as? String
     }
 
-    private fun buildCache(continuation: BaseContinuationImpl) {
+    private fun buildCache(continuation: BaseContinuationImpl): Cache {
         val getModuleMethod: Method
         try {
             getModuleMethod = Class::class.java.getDeclaredMethod("getModule")
         } catch (ignored: NoSuchMethodException) {
-            cache = NotOnJava9
-            return
+            return notOnJava9.also { cache = it }
         }
         val methodClass = continuation.javaClass.classLoader.loadClass("java.lang.Module")
         val getDescriptorMethod = methodClass.getDeclaredMethod("getDescriptor")
         val moduleDescriptorClass = continuation.javaClass.classLoader.loadClass("java.lang.module.ModuleDescriptor")
         val nameMethod = moduleDescriptorClass.getDeclaredMethod("name")
-        cache = Cache(getModuleMethod, getDescriptorMethod, nameMethod)
+        return Cache(getModuleMethod, getDescriptorMethod, nameMethod).also { cache = it }
     }
 }
 
